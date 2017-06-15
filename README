@@ -1,0 +1,52 @@
+libnss_mapuser v1.0.1
+Dave Olson <olson@cumulusnetworks.com>
+June 15, 2017
+
+This NSS module has one and only one purpose.  It allows getpwnam() and getpwuid()
+lookups for arbitrary usernames, with explict matching to a named account.
+The mapped lookup is only done if the requested name is not already present
+in /etc/passwd (no other lookup, such as LDAP, is done).
+
+It exists as two separate plugins, because the name lookup should be last
+in the passwd database lookup in nsswitch.conf (so any other valid lookup
+matches first), while the UID lookup should be first, so that a lookup on
+the UID of the mapped user returns the mapped name.
+
+It's intended for use with authentication mechanisms such as RADIUS, where
+it is not possible to determine if a username is valid without authenticating
+at the same time.
+
+The mapping is done to a single account specified in the configuration
+file /etc/mapuser_nss.conf.
+
+The returned passwd field is always filled in as 'x', so that authentication
+of the base account is not possible through PAM.  Only the mapped accounts
+are able to login, typically through PAM, such as pam_radius.so.
+
+The GECOS field is filled in as 'USERNAME mapped user' and the home directory
+uses the same path as the user from /etc/passwd, with the last component replaced
+by the passed in username.   The uid, gid, and shell fields are copied directly
+from the map_user account passwd dataa.
+
+For example, if the passed in username is 'olsonr', the result of running
+   getent -s mapuser passwd olsonr
+will be something like this:
+   olsonr:x:1017:1017:olsonr mapped user:/home/olsonr:/bin/bash
+if the map_user field is set to radius_user, and the radius_user entry in
+/etc/passwd is:
+   radius_user:x:1017:1017:radius_user,,,:/home/radius_user:/bin/bash
+
+This package will create the radius_user account with adduser if it does not
+already exist, and that is the default mapping in the configuration, and will
+add the group radius_users with the addgroup command.
+
+The mapping can be changed in the configuration file /etc/mapuser_nss.conf.
+In that case, the account must already exist, or should be created with 
+a command similar to:
+   adduser --quiet --firstuid 1000 --disabled-login --ingroup GROUP \
+     --gecos "radius user" USERNAME
+
+On install, this package will edit /etc/nsswitch.conf to add the two plugins,
+so that it looks similar to:
+   passwd:         mapuid compat  mapname
+if these plugins are not already present.

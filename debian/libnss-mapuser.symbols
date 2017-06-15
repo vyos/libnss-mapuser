@@ -1,0 +1,5 @@
+libnss_mapname.so.2 libnss-mapuser #MINVER#
+ _nss_mapname_getpwnam_r@Base 1.0.0
+
+libnss_mapuid.so.2 libnss-mapuser #MINVER#
+ _nss_mapuid_getpwuid_r@Base 1.0.0

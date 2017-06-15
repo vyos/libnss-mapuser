@@ -1,0 +1,45 @@
+#!/bin/sh
+# postinst script for libnss-mapuser
+#
+# see: dh_installdeb(1)
+
+set -e
+
+case "$1" in
+    configure)
+		# Add mapname and user to /etc/nsswitch.conf, since it's necessary
+		# for this package.  uid must be first, and mapname must be last
+		# so uids for mapped users return the mapped name, and on the name,
+		# we only want to map if no other matches were found
+		( set +e;
+		rgroup=radius_users
+		if [ -e "/etc/nsswitch.conf" ]; then
+			sed -i -e '/ mapname/b' \
+				-e '/^passwd/s/[ \t][ \t]*/&mapuid /' \
+				-e '/^passwd.*#/s/#.*/ mapname &/' \
+				-e '/^passwd[^#]*$/s/$/ mapname &/' \
+				/etc/nsswitch.conf
+		fi
+		addgroup --quiet $rgroup 2>&1 | grep -v 'already exists'
+		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
+		    --gecos "radius user" radius_user 2>&1 | grep -v 'already exists'
+		exit 0
+		)
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+# needed for install, upgrade, remove, and purge, including aborts
+pam-auth-update --package
+
+
+#DEBHELPER#
+
+exit 0

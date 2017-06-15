@@ -1,0 +1,10 @@
+libnss-mapuser: native-package-with-dash-version
+libnss-mapuser: package-name-doesnt-match-sonames libnss-mapname2 libnss-mapuid2
+libnss-mapuser: new-package-should-close-itp-bug
+# messages say "source", but using "source" causes "malformed" warning.
+# So these don't actually work, but leaving them here to document the intent
+libnss-mapuser binary: diff-contains-git-control-dir .git
+libnss-mapuser binary: unsupported-source-format 3.0 (git)
+# we don't use misc-depends, and adding it produces a build warning
+# about it not being needed
+libnss-mapuser binary: debhelper-but-no-misc-depends libnss-mapuser

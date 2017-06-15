@@ -1,0 +1,6 @@
+Name: libnss-mapuser uses this to maintain the session uid => user mapping
+Default: yes
+Priority: 257
+Session-Type: Additional
+Session:
+	optional pam_script.so dir=/usr/share/mapuser
