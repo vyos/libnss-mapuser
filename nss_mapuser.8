@@ -43,14 +43,15 @@ named account in the configuration file is
 and that entry in
 .I /etc/passwd
 is
-.IP
+.RS
 .B radius_user:x:1017:1002:radius user,,,:/home/radius_user:/bin/bash
-.PP
+.RE
 then the matching line returned by
 .I getent passwd daveolson
 would be
-.IP
+.RS
 .B daveolson:x:1017:1002:daveolson mapped user:/home/daveolson:/bin/bash
+.RE
 .PP
 The matching lookup on the uid will only be successful if
 .B daveolson

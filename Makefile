@@ -17,19 +17,19 @@ else
 endif
 ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
 	STRIP = strip
-    FVISIBILITY = -fvisibility=hidden 
+    FVISIBILITY = -fvisibility=hidden
 else
-	STRIP=echo Nostrip 
+	STRIP=echo Nostrip
     FVISIBILITY = -fvisibility=default
 endif
 
-CPPFLAGS = -D_FORTIFY_SOURCE=2  
+CPPFLAGS = -D_FORTIFY_SOURCE=2
 CFLAGS = $(CPPFLAGS) ${OPTFLAGS} -fPIC -fstack-protector-strong \
 		 -Wformat -Werror=format-security -Wall $(FVISIBILITY)
 LDFLAGS = -shared  -fPIC -DPIC \
 		  -Wl,-z -Wl,relro -Wl,-z -Wl,now -Wl,-soname -Wl,$@
 
-all: $(NSSNAMELIB) $(NSSUIDLIB) 
+all: $(NSSNAMELIB) $(NSSUIDLIB)
 
 $(NSSUIDLIB): $(UID_SOURCE:.c=.o)
 	$(CC) $(LDFLAGS) $^ -o $@

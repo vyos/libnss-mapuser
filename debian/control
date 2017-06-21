@@ -8,7 +8,7 @@ Homepage: http://www.cumulusnetworks.com
 
 Package: libnss-mapuser
 Architecture: any
-Depends: ${shlibs:Depends}, adduser
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
 Description: NSS modules to map any requested username to a local account
  Performs getpwname and getpwuid lookups via NSS for systems like RADIUS
  where it is not possible to do a username lookup without authentication

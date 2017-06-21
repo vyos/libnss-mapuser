@@ -41,7 +41,7 @@ already exist, and that is the default mapping in the configuration, and will
 add the group radius_users with the addgroup command.
 
 The mapping can be changed in the configuration file /etc/mapuser_nss.conf.
-In that case, the account must already exist, or should be created with 
+In that case, the account must already exist, or should be created with
 a command similar to:
    adduser --quiet --firstuid 1000 --disabled-login --ingroup GROUP \
      --gecos "radius user" USERNAME

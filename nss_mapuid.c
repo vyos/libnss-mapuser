@@ -198,7 +198,7 @@ enum nss_status _nss_mapuid_getpwuid_r(uid_t uid, struct passwd *pw,
                 nssname, uid, min_uid);
         return status;
     }
-    
+
     /* marshal the args for the lower level functions */
     pb.pw = pw;
     pb.buf = buffer;
