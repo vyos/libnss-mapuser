@@ -1,0 +1,67 @@
+.TH mapuser_nss 5
+.\" Copyright 2017 Cumulus Networks, Inc.  All rights reserved.
+.SH NAME
+mapuser_nss.conf \- NSS mapuser configuration file
+.SH DESCRIPTION
+This is the configuration file for the NSS mapuser plugins.
+See the
+.BR mapuser_nss (8)
+manpage for more general information on the plugin.
+This configuration file controls debug settings, the local account used
+for mapping users, and which usernames (accounts) and uids are skipped.
+.PP
+.TP
+.I debug=NUMBER
+Output lookup debugging information via syslog(3).
+.TP
+.I exclude_users=user1,user2...
+Usernames (accounts) comma separate list.  This is used by mapname NSS plugin getpwuid()
+entry point.  The account to be looked up is checked against this list.   If a match is
+found, an immediate NOTFOUND status is returned.  This reduces overhead for the standard
+local user accounts.
+.TP
+.I mapped_user=NAME
+This is the local account which mapping uses as a template.   It must be a local
+account (found in
+.IR /etc/passwd ).
+When a uid or name match is found, this account information is read from
+.I /etc/passwd
+and used as a template for the matching account.  The
+.B pw_name
+field (user account name)
+is replaced with the original (login) name, and the original name is
+inserted at the beginning of the
+.B pw_gecos
+field.  The
+.B pw_dir
+(home directory)
+field replaces the last component of the directory path with the original login
+name.
+.IP
+When changing this field to a different name than the default, be sure the account exists in
+.IR /etc/passwd ,
+and that the account was created as disabled or locked (does not have a legal password, so
+the
+.I NAME
+account can not be used for logins.  When using
+.IR adduser (8)
+to create these accounts, use the
+.B --disabled-login
+argument to disable login for the account.
+.TP
+.I min_uid=NUMBER
+UID's passed to the mapuid NSS plugin getpwuid() entry point that are below this value
+cause an immediate NOTFOUND status to be returned.  This reduces
+overhead for the standard local user accounts.
+.SH "SEE ALSO"
+.BR adduser (8),
+.BR pam_radius_auth (8),
+.BR mapuser_nss (8),
+.BR nsswitch.conf (5),
+.BR getpwuid (3),
+.BR getpwnam (3),
+.SH FILES
+.I /etc/nss_mapuser.conf
+- mapuser NSS plugin configuration parameters
+.SH AUTHOR
+Dave Olson <olson@cumulusnetworks.com>

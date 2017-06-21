@@ -1,0 +1,114 @@
+.TH mapuser_nss 8
+.\" Copyright 2017 Cumulus Networks, Inc.  All rights reserved.
+.SH NAME
+libnss_mapname.so.2 \- NSS mapuser plugin
+.br
+libnss_mapuid.so.2 \- NSS mapuid plugin
+.SH DESCRIPTION
+These are the NSS mapuser plugins.
+See the
+.BR mapuser_nss (5)
+manpage for information on configuration.
+These plugins are intended to be used with protocols such as RADIUS that do not
+provide enough information to define a linux account (uid, gid, home directory).
+The traditional method was to add all RADIUS users to the local
+.I /etc/passwd
+file, or to enable them via other means such as LDAP.
+These plugins allow RADIUS users to login with no configuration other than the
+initial setup of the RADIUS client, and these plugins.
+.PP
+The plugins work by mapping user accounts to a named account in a configuration
+file, and using the named account as a template for the requested account.
+.PP
+The named account (default is
+.I radius_user)
+must be present in
+.IR /etc/passwd .
+The
+.B pw_name
+field (user account name)
+is replaced with the account name that is being looked up, and the original name is
+inserted at the beginning of the
+.B pw_gecos
+field.  The
+.B pw_dir
+(home directory)
+field replaces the last component of the directory path with the original login
+name.
+For example, if the name being looked up is
+.B daveolson
+and the
+named account in the configuration file is
+.BR radius_user ,
+and that entry in
+.I /etc/passwd
+is
+.IP
+.B radius_user:x:1017:1002:radius user,,,:/home/radius_user:/bin/bash
+.PP
+then the matching line returned by
+.I getent passwd daveolson
+would be
+.IP
+.B daveolson:x:1017:1002:daveolson mapped user:/home/daveolson:/bin/bash
+.PP
+The matching lookup on the uid will only be successful if
+.B daveolson
+is logged in, because it checks a flat file database that is created when
+the mapped user logs in.
+.PP
+When multiple users are logged in at the same time,
+the uid lookup will return the first matching account name.
+This is similar to having to multiple accounts in the
+.I /etc/passwd
+file with the same UID.
+.PP
+There are two separate plugins,
+.B libnss_mapname
+for user account names
+.RI ( getpwnam() (3)),
+and
+.B libnss_mapuid
+for uid
+.RI ( getpwuid() (3)),
+Two separate plugins are required.
+.PP
+The name lookup
+.B mapuser
+must be the last method used (last plugin on the
+.B passwd
+database), because it will always produce a successful lookup on
+any user account name, unless there are configuration or other errors.
+.PP
+The uid lookup
+.B mapuid
+must be the first method used (first plugin on the
+.B passwd
+database), because the uid will always match a local account from
+.IR /etc/passwd ,
+any user account name, unless there are configuration or other errors.
+.PP
+The flat file database is created using the
+.B pam_script
+plugin.  In addition to creating and deleting files at session start and
+end, the open script will also create the home directory using
+.IR mkhomedir_helper .
+.SH "SEE ALSO"
+.BR adduser (8),
+.BR mkhomedir_helper (8),
+.BR pam_radius_auth (8),
+.BR pam_script (8),
+.BR mapuser_nss (5),
+.BR nsswitch.conf (5),
+.BR getpwuid (3),
+.BR getpwnam (3),
+.BR getent (1).
+.SH FILES
+.I /etc/nss_mapuser.conf
+- mapuser NSS plugin configuration parameters.
+.br
+.I /run/mapuser/SESSION_NUMBER
+- the files containing the original uid and username for the account with linux session
+.IR SESSION_NUMBER .
+.SH AUTHOR
+Dave Olson <olson@cumulusnetworks.com>
