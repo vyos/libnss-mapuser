@@ -37,30 +37,49 @@ read auid < /proc/$$/loginuid
 if [ "$auid" -eq 0 ]; then exit 0; fi
 
 # for debugging, if needed
-# logger -t mapuser $0 called with $PAM_USER pid=$$ session="$sess" auid="$auid"
+#DEBUG logger -t mapuser $0 user=$PAM_USER pid=$$ session="$sess" auid="$auid"
 
 if [ "$sess" -le 0 ] ; then
-	logger -t $0 sessionid not set, no mapuser cleanup for \
-	   PID $$ user $PAM_USER
-	exit 0 # never trigger an error
+  logger -t $0 sessionid not set, no mapuser cleanup for \
+    PID $$ user $PAM_USER
+  exit 0 # never trigger an error
 fi
 
 file=$dbdir/$sess
-[ -e $file ] &&  {
+if [ -e $file ]; then
    IFS='=
 ' read tag fauid <<< $(grep '^auid=' $file)
    IFS='=
 ' read tag fsess <<< $(grep '^session=' $file)
-   # If info doesn't match, report it, but clean up anyway.
-   [ "$auid" != "$fauid" -o "$sess" != "$fsess" ] &&
+   # If info doesn't match, report it, and don't clean up
+   if [ "$auid" != "$fauid" -o "$sess" != "$fsess" ]; then
      logger -t $0 "Session $sess mismatch auid $auid,$fauid session $sess,$fsess"
-
-   #OLSON rm -f $file
-   }
-
-# OLSON, probably need to gc all files on exit from any, because
-# original PID is always gone, but we don't want to remove on exit
-# from su, sudo, etc.
+   else
+     uid=$(id -u)
+     if [ "$uid" -ne 0 ]; then # shouldn't happen from pam_script
+       logger -t $0 called with UID=$uid, no cleanup
+       exit 0
+     fi
+     pids=( $(egrep -w $fsess /proc/[1-9]*/sessionid | \
+              sed -e 's,/proc/,,' -e 's,/.*,,') )
+     clean=1
+     for pid in ${pids[*]}; do
+       [ $pid -eq $$ ] && continue # skip ourselve
+       read cmd  2>/dev/null < /proc/$pid/comm # ignore exited egrep, sed
+       [ -z "$cmd" ] && continue # pid exited
+       msg="$msg PID $pid comm=$cmd"
+       case "$cmd" in
+         sshd|sudo|login|su|telnetd)  ;;
+         *) clean=0 ; cleancmd="$cmd" ;;
+       esac
+     done
+     #DEBUG logger -t $0 sess=$fsess clean=$clean cmd=$cleancmd has $msg active
+     [ $clean -eq 1 ] && {
+       #DEBUG logger -t $0 cleanup session $fsess
+       rm -f $file
+     }
+   fi
+fi
 
 # always succeed, this should not cause sessions shutdown errors
 exit 0
