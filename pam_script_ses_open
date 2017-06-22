@@ -54,7 +54,10 @@ fi
 hdir=$(eval echo ~$PAM_USER)
 [ -d "$hdir" ] || /sbin/mkhomedir_helper $PAM_USER
 
-date +"%FT%T.%N%nuser=$PAM_USER%npid=$$%nauid=$auid%nsession=$sess%nhome=$hdir" \
+# don't overwrite if it already exists.  Happens when sudo or su
+# is run from an existing mapped session.
+[ -s $dbdir/$sess ] || \
+   date +"%FT%T.%N%nuser=$PAM_USER%npid=$$%nauid=$auid%nsession=$sess%nhome=$hdir" \
    > $dbdir/$sess
 
 # always succeed, this should not block sessions on errors

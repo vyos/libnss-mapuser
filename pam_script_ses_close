@@ -55,8 +55,12 @@ file=$dbdir/$sess
    [ "$auid" != "$fauid" -o "$sess" != "$fsess" ] &&
      logger -t $0 "Session $sess mismatch auid $auid,$fauid session $sess,$fsess"
 
-   rm -f $file
+   #OLSON rm -f $file
    }
+
+# OLSON, probably need to gc all files on exit from any, because
+# original PID is always gone, but we don't want to remove on exit
+# from su, sudo, etc.
 
 # always succeed, this should not cause sessions shutdown errors
 exit 0
