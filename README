@@ -17,7 +17,7 @@ it is not possible to determine if a username is valid without authenticating
 at the same time.
 
 The mapping is done to a single account specified in the configuration
-file /etc/mapuser_nss.conf.
+file /etc/nss_mapuser.conf.
 
 The returned passwd field is always filled in as 'x', so that authentication
 of the base account is not possible through PAM.  Only the mapped accounts
@@ -40,7 +40,7 @@ This package will create the radius_user account with adduser if it does not
 already exist, and that is the default mapping in the configuration, and will
 add the group radius_users with the addgroup command.
 
-The mapping can be changed in the configuration file /etc/mapuser_nss.conf.
+The mapping can be changed in the configuration file /etc/nss_mapuser.conf.
 In that case, the account must already exist, or should be created with
 a command similar to:
    adduser --quiet --firstuid 1000 --disabled-login --ingroup GROUP \

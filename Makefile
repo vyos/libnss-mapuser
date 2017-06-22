@@ -44,7 +44,7 @@ install: all
 			$(DESTDIR)$(LIBDIR)/${NSSNAMELIB}
 	$(STRIP) --strip-all --keep-symbol=_nss_mapuid_getpwuid_r \
 			$(DESTDIR)$(LIBDIR)/${NSSUIDLIB}
-	install -m 644 mapuser_nss.conf $(DESTDIR)/etc/
+	install -m 644 nss_mapuser.conf $(DESTDIR)/etc/
 
 clean:
 	rm -f *.o $(NSSNAMELIB) $(NSSUIDLIB)

@@ -27,7 +27,7 @@
 #include "map_common.h"
 #include <sys/stat.h>
 
-static const char config_file[] = "/etc/mapuser_nss.conf";
+static const char config_file[] = "/etc/nss_mapuser.conf";
 
 #define DEF_MIN_UID 1001 /*  fail lookups on uid's below this value */
 

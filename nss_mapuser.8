@@ -1,4 +1,4 @@
-.TH mapuser_nss 8
+.TH nss_mapuser 8
 .\" Copyright 2017 Cumulus Networks, Inc.  All rights reserved.
 .SH NAME
 libnss_mapname.so.2 \- NSS mapuser plugin
@@ -7,7 +7,7 @@ libnss_mapuid.so.2 \- NSS mapuid plugin
 .SH DESCRIPTION
 These are the NSS mapuser plugins.
 See the
-.BR mapuser_nss (5)
+.BR nss_mapuser (5)
 manpage for information on configuration.
 These plugins are intended to be used with protocols such as RADIUS that do not
 provide enough information to define a linux account (uid, gid, home directory).
@@ -99,7 +99,7 @@ end, the open script will also create the home directory using
 .BR mkhomedir_helper (8),
 .BR pam_radius_auth (8),
 .BR pam_script (8),
-.BR mapuser_nss (5),
+.BR nss_mapuser (5),
 .BR nsswitch.conf (5),
 .BR getpwuid (3),
 .BR getpwnam (3),
