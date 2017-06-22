@@ -36,7 +36,7 @@ field.  The
 field replaces the last component of the directory path with the original login
 name.
 For example, if the name being looked up is
-.B daveolson
+.B dave
 and the
 named account in the configuration file is
 .BR radius_user ,
@@ -44,17 +44,17 @@ and that entry in
 .I /etc/passwd
 is
 .RS
-.B radius_user:x:1017:1002:radius user,,,:/home/radius_user:/bin/bash
+.B radius_user:x:1017:1002:radius\~user:/home/radius_user:/bin/bash
 .RE
 then the matching line returned by
-.I getent passwd daveolson
+.I getent passwd dave
 would be
 .RS
-.B daveolson:x:1017:1002:daveolson mapped user:/home/daveolson:/bin/bash
+.B dave:x:1017:1002:dave\~mapped\~user:/home/dave:/bin/bash
 .RE
 .PP
 The matching lookup on the uid will only be successful if
-.B daveolson
+.B dave
 is logged in, because it checks a flat file database that is created when
 the mapped user logs in.
 .PP
