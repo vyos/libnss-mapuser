@@ -1,4 +1,4 @@
-libnss-mapuser (1.0.0-cl3u1) unstable; urgency=low
+libnss-mapuser (1.0.0-cl3u1) RELEASED; urgency=low
 
   * Initial version to do successful NSS lookups on any username,
     and matching uid lookups back to the original name.
