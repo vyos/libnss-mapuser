@@ -42,6 +42,13 @@
 static const char *nssname = "nss_mapuser"; /* for syslogs */
 
 /*
+ * If you aren't using glibc or a variant that supports this,
+ * and you have a system that supports the BSD getprogname(),
+ * you can replace this use with getprogname()
+ */
+extern const char *__progname;
+
+/*
  * This is an NSS entry point.
  * We map any username given to the account listed in the configuration file
  * We only fail if we can't read the configuration file, or the username
@@ -55,6 +62,16 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
 {
     enum nss_status status = NSS_STATUS_NOTFOUND;
     struct pwbuf pbuf;
+
+    /*
+     * the useradd family will not add/mod/del users correctly with
+     * the mapuid functionality, so return immediately if we are
+     * running as part of those processes.
+     */
+    if (__progname && (!strcmp(__progname, "useradd") || 
+        !strcmp(__progname, "usermod") || 
+        !strcmp(__progname, "userdel")))
+        return status;
 
     if (nss_mapuser_config(errnop, nssname) == 1) {
          syslog(LOG_NOTICE, "%s: bad configuration", nssname);

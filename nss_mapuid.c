@@ -53,6 +53,13 @@ static const char *nssname = "nss_mapuid"; /* for syslogs */
 static const char dbdir[] = "/run/mapuser/";
 
 /*
+ * If you aren't using glibc or a variant that supports this,
+ * and you have a system that supports the BSD getprogname(),
+ * you can replace this use with getprogname()
+ */
+extern const char *__progname;
+
+/*
  * Read the requested session file (in the dbdir by intent), verify the
  * uid matches, and setup the passwd structure with the username found
  * in the file.
@@ -184,6 +191,16 @@ enum nss_status _nss_mapuid_getpwuid_r(uid_t uid, struct passwd *pw,
     struct pwbuf pb;
     enum nss_status status = NSS_STATUS_NOTFOUND;
     uint32_t session;
+
+    /*
+     * the useradd family will not add/mod/del users correctly with
+     * the mapuid functionality, so return immediately if we are
+     * running as part of those processes.
+     */
+    if (__progname && (!strcmp(__progname, "useradd") || 
+        !strcmp(__progname, "usermod") || 
+        !strcmp(__progname, "userdel")))
+        return status;
 
     /*  this can happen for permission reasons, do don't complain except
      *  at debug */
