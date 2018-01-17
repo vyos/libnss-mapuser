@@ -1,3 +1,9 @@
+libnss-mapuser (1.0.0-cl3u2) RELEASED; urgency=low
+
+  * Added more system accounts to exclude_users: daemon, quagga,
+
+ -- dev-support <dev-support@cumulusnetworks.com>  Wed, 17 Jan 2018 12:55:08 -0800
+
 libnss-mapuser (1.0.0-cl3u1) RELEASED; urgency=low
 
   * Initial version to do successful NSS lookups on any username,
