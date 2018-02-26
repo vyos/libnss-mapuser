@@ -1,3 +1,10 @@
+libnss-mapuser (1.0.0-cl3u3) RELEASED; urgency=low
+
+  * Closes CM-19866 - Fixed exclude_users not skipped, and added
+    more system accounts to exclude_users: www-data,man, tacacs[0-9]*.
+
+ -- dev-support <dev-support@cumulusnetworks.com>  Mon, 26 Feb 2018 09:51:44 -0800
+
 libnss-mapuser (1.0.0-cl3u2) RELEASED; urgency=low
 
   * Added more system accounts to exclude_users: daemon, quagga,
