@@ -18,7 +18,13 @@ Output lookup debugging information via syslog(3).
 Usernames (accounts) comma separate list.  This is used by mapname NSS plugin getpwuid()
 entry point.  The account to be looked up is checked against this list.   If a match is
 found, an immediate NOTFOUND status is returned.  This reduces overhead for the standard
-local user accounts.
+local user accounts.  The
+.I mapped_user
+and
+.I mapped_priv_user
+fields from the
+configuration file are always skipped, as are any names starting with 
+.BR tacacs[0-9] .
 .TP
 .I mapped_user=NAME
 This is the local account which mapping uses as a template.   It must be a local

@@ -37,6 +37,7 @@
 
 
 #include "map_common.h"
+#include <stdbool.h>
 
 
 static const char *nssname = "nss_mapuser"; /* for syslogs */
@@ -62,6 +63,7 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
 {
     enum nss_status status = NSS_STATUS_NOTFOUND;
     struct pwbuf pbuf;
+    bool islocal = 0;
 
     /*
      * the useradd family will not add/mod/del users correctly with
@@ -77,6 +79,43 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
          syslog(LOG_NOTICE, "%s: bad configuration", nssname);
          return status;
     }
+
+    /*
+     * Ignore any name starting with tacacs[0-9] in case a
+     * tacplus client is installed.  Cleaner than listing
+     * all 16 in the exclude_users list or implementing
+     * some form of wildcard.  Also ignore our own mappeduser
+     * and mapped_priv_user names if set.
+     */
+    if ((mappeduser && !strcmp(mappeduser, name)) ||
+        (mapped_priv_user && !strcmp(mapped_priv_user, name)))
+        islocal = 1;
+    else if (!strncmp("tacacs", name, 6) && isdigit(name[6]))
+        islocal = 1;
+    else if (exclude_users) {
+        char *user, *list;
+        list = strdup(exclude_users);
+        if (list) {
+            static const char *delim = ", \t\n";
+            user = strtok(list, delim);
+            list = NULL;
+            while (user) {
+                if(!strcmp(user, name)) {
+                    islocal = 1;
+                    break;
+                }
+                user = strtok(NULL, delim);
+            }
+            free(list);
+        }
+    }
+    if (islocal) {
+        if(debug > 1)
+            syslog(LOG_DEBUG, "%s: skipped excluded user: %s", nssname,
+                name);
+        return 2;
+    }
+
 
     /* marshal the args for the lower level functions */
     pbuf.name = (char *)name;

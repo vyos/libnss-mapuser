@@ -50,6 +50,7 @@ struct pwbuf {
 /* configuration variables. */
 extern char *exclude_users;
 extern char *mappeduser;
+extern char *mapped_priv_user;
 extern uid_t min_uid;
 extern int debug;
 

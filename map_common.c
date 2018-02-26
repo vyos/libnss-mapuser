@@ -35,6 +35,7 @@ static const char config_file[] = "/etc/nss_mapuser.conf";
  * in build, so local to the shared lib. */
 char *exclude_users; /*  don't lookup these users */
 char *mappeduser;
+char *mapped_priv_user;
 uid_t min_uid = DEF_MIN_UID;
 int debug;
 
@@ -53,6 +54,10 @@ reset_config(void)
     if(mappeduser) {
         (void)free(mappeduser);
         mappeduser = NULL;
+    }
+    if(mapped_priv_user) {
+        (void)free(mapped_priv_user);
+        mapped_priv_user = NULL;
     }
     debug = 0;
     min_uid = DEF_MIN_UID;
@@ -116,6 +121,10 @@ nss_mapuser_config(int *errnop, const char *lname)
         else if(!strncmp(lbuf, "mapped_user=", 12)) {
             /*  the user we are mapping to */
             mappeduser = strdup(lbuf+12);
+        }
+        else if(!strncmp(lbuf, "mapped_priv_user=", 17)) {
+            /*  the user we are mapping to */
+            mapped_priv_user = strdup(lbuf+17);
         }
         else if(!strncmp(lbuf, "min_uid=", 8)) {
             /*
