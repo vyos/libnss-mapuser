@@ -17,7 +17,6 @@
  * along with this program - see the file COPYING.
  */
 
-
 /*
  * This plugin implements getpwuid_r for NSS to map a UID back to
  * a mapped username account, set up via nss_mapuser.
@@ -48,8 +47,7 @@
 #include <dirent.h>
 #include <ctype.h>
 
-
-static const char *nssname = "nss_mapuid"; /* for syslogs */
+static const char *nssname = "nss_mapuid";	/* for syslogs */
 static const char dbdir[] = "/run/mapuser/";
 
 /*
@@ -66,98 +64,97 @@ extern const char *__progname;
  */
 static int chk_session_file(char *sfile, uid_t uid, struct pwbuf *pb)
 {
-    char rbuf[256], user[64];
-    FILE *mapf;
-    uid_t auid = 0;
-    int ret = 1;
+	char rbuf[256], user[64];
+	FILE *mapf;
+	uid_t auid = 0;
+	int ret = 1;
 
-    mapf = fopen(sfile, "r");
-    if (!mapf) {
-        if( debug)
-            syslog(LOG_DEBUG, "%s:  session map file %s open fails: %m",
-                nssname, sfile);
-        return ret;
-    }
-    user[0] = '\0';
-    while(fgets(rbuf, sizeof rbuf, mapf)) {
-        strtok(rbuf, " \t\n\r\f"); /* terminate buffer at first whitespace */
-        if(!strncmp("user=", rbuf, 5)) { /* should precede auid */
-            snprintf(user, sizeof user, "%s", rbuf+5);
-            if (auid) /* found out of order, but now have both */
-                break;
-        }
-        else if(!strncmp("auid=", rbuf, 5)) {
-            uid_t fuid = (uid_t)strtoul(rbuf+5, NULL, 10);
-            if (fuid && uid == fuid) {
-                auid = fuid;
-                if (user[0])
-                    break; /*  normal ordering, else keep looking for user */
-            }
-        }
-    }
-    fclose(mapf);
+	mapf = fopen(sfile, "r");
+	if (!mapf) {
+		if (debug)
+			syslog(LOG_DEBUG,
+			       "%s:  session map file %s open fails: %m",
+			       nssname, sfile);
+		return ret;
+	}
+	user[0] = '\0';
+	while (fgets(rbuf, sizeof rbuf, mapf)) {
+		strtok(rbuf, " \t\n\r\f");	/* terminate buffer at first whitespace */
+		if (!strncmp("user=", rbuf, 5)) {	/* should precede auid */
+			snprintf(user, sizeof user, "%s", rbuf + 5);
+			if (auid)	/* found out of order, but now have both */
+				break;
+		} else if (!strncmp("auid=", rbuf, 5)) {
+			uid_t fuid = (uid_t) strtoul(rbuf + 5, NULL, 10);
+			if (fuid && uid == fuid) {
+				auid = fuid;
+				if (user[0])
+					break;	/*  normal ordering, else keep looking for user */
+			}
+		}
+	}
+	fclose(mapf);
 
-    if (auid && user[0]) /*  otherwise not a match */
-        ret = get_pw_mapuser(user, pb); /* should always succeed */
+	if (auid && user[0])	/*  otherwise not a match */
+		ret = get_pw_mapuser(user, pb);	/* should always succeed */
 
-    return ret;
+	return ret;
 }
 
 /* find mapping for this sessionid */
-static int
-find_mapped_name(struct pwbuf *pb, uid_t uid, uint32_t session)
+static int find_mapped_name(struct pwbuf *pb, uid_t uid, uint32_t session)
 {
-    char sessfile[sizeof dbdir + 11];
+	char sessfile[sizeof dbdir + 11];
 
-    snprintf(sessfile, sizeof sessfile, "%s%u", dbdir, session);
-    return chk_session_file(sessfile, uid, pb);
+	snprintf(sessfile, sizeof sessfile, "%s%u", dbdir, session);
+	return chk_session_file(sessfile, uid, pb);
 }
 
 static int find_mappingfile(struct pwbuf *pb, uid_t uid)
 {
-    DIR *dir;
-    struct dirent *ent;
-    int ret = 1;
+	DIR *dir;
+	struct dirent *ent;
+	int ret = 1;
 
-    dir = opendir(dbdir);
-    if (!dir) { /*  can happen if no mapped users logged in */
-        if (debug > 1)
-            syslog(LOG_DEBUG, "%s: Unable to open mapping directory %s: %m",
-                nssname, dbdir);
-        return 1;
-    }
+	dir = opendir(dbdir);
+	if (!dir) {		/*  can happen if no mapped users logged in */
+		if (debug > 1)
+			syslog(LOG_DEBUG,
+			       "%s: Unable to open mapping directory %s: %m",
+			       nssname, dbdir);
+		return 1;
+	}
 
-    /* Loop through all numeric files in dbdir, check for matching uid */
-    while (ret && (ent = readdir(dir))) {
-        char sessfile[sizeof dbdir + 11];
-        if (!isdigit(ent->d_name[0])) /* sanity check on session file */
-            continue;
-        snprintf(sessfile, sizeof sessfile, "%s%s", dbdir, ent->d_name);
-        ret = chk_session_file(sessfile, uid, pb);
-    }
-    if (ret && debug)
-        syslog(LOG_DEBUG, "%s: uid %u mapping not found in map files",
-            nssname, uid);
-    closedir(dir);
-    return ret;
+	/* Loop through all numeric files in dbdir, check for matching uid */
+	while (ret && (ent = readdir(dir))) {
+		char sessfile[sizeof dbdir + 11];
+		if (!isdigit(ent->d_name[0]))	/* sanity check on session file */
+			continue;
+		snprintf(sessfile, sizeof sessfile, "%s%s", dbdir, ent->d_name);
+		ret = chk_session_file(sessfile, uid, pb);
+	}
+	if (ret && debug)
+		syslog(LOG_DEBUG, "%s: uid %u mapping not found in map files",
+		       nssname, uid);
+	closedir(dir);
+	return ret;
 }
 
-static uint32_t
-get_sessionid(void)
+static uint32_t get_sessionid(void)
 {
-    int fd = -1, cnt;
-    uint32_t id = 0U;
-    static char buf[12];
+	int fd = -1, cnt;
+	uint32_t id = 0U;
+	static char buf[12];
 
-    fd = open("/proc/self/sessionid", O_RDONLY);
-    if(fd != -1) {
-        cnt = read(fd, buf, sizeof(buf));
-        close(fd);
-    }
-    if(fd != -1 && cnt > 0) {
-        id = strtoul(buf, NULL, 0);
-    }
-    return id;
+	fd = open("/proc/self/sessionid", O_RDONLY);
+	if (fd != -1) {
+		cnt = read(fd, buf, sizeof(buf));
+		close(fd);
+	}
+	if (fd != -1 && cnt > 0) {
+		id = strtoul(buf, NULL, 0);
+	}
+	return id;
 }
 
 /*
@@ -184,55 +181,55 @@ get_sessionid(void)
  * just get the files, ldap, etc. entry for the UID
  * Returns the first match if multiple mapped users.
  */
-__attribute__ ((visibility ("default")))
+__attribute__ ((visibility("default")))
 enum nss_status _nss_mapuid_getpwuid_r(uid_t uid, struct passwd *pw,
-    char *buffer, size_t buflen, int *errnop)
+				       char *buffer, size_t buflen, int *errnop)
 {
-    struct pwbuf pb;
-    enum nss_status status = NSS_STATUS_NOTFOUND;
-    uint32_t session;
+	struct pwbuf pb;
+	enum nss_status status = NSS_STATUS_NOTFOUND;
+	uint32_t session;
 
-    /*
-     * the useradd family will not add/mod/del users correctly with
-     * the mapuid functionality, so return immediately if we are
-     * running as part of those processes.
-     */
-    if (__progname && (!strcmp(__progname, "useradd") || 
-        !strcmp(__progname, "usermod") || 
-        !strcmp(__progname, "userdel")))
-        return status;
+	/*
+	 * the useradd family will not add/mod/del users correctly with
+	 * the mapuid functionality, so return immediately if we are
+	 * running as part of those processes.
+	 */
+	if (__progname && (!strcmp(__progname, "useradd") ||
+			   !strcmp(__progname, "usermod") ||
+			   !strcmp(__progname, "userdel")))
+		return status;
 
-    /*  this can happen for permission reasons, do don't complain except
-     *  at debug */
-    if (nss_mapuser_config(errnop, nssname) == 1) {
-         return status; /* syslog already done */
-    }
+	/*  this can happen for permission reasons, do don't complain except
+	 *  at debug */
+	if (nss_mapuser_config(errnop, nssname) == 1) {
+		return status;	/* syslog already done */
+	}
 
+	if (min_uid != ~0U && uid < min_uid) {
+		if (debug > 1)
+			syslog(LOG_DEBUG,
+			       "%s: uid %u < min_uid %u, don't lookup", nssname,
+			       uid, min_uid);
+		return status;
+	}
 
-    if (min_uid != ~0U && uid < min_uid) {
-        if(debug > 1)
-            syslog(LOG_DEBUG, "%s: uid %u < min_uid %u, don't lookup",
-                nssname, uid, min_uid);
-        return status;
-    }
+	/* marshal the args for the lower level functions */
+	pb.pw = pw;
+	pb.buf = buffer;
+	pb.buflen = buflen;
+	pb.errnop = errnop;
+	pb.name = NULL;
 
-    /* marshal the args for the lower level functions */
-    pb.pw = pw;
-    pb.buf = buffer;
-    pb.buflen = buflen;
-    pb.errnop = errnop;
-    pb.name = NULL;
-
-    /* session needs to be set to lookup this user.  May also be set
-     * for other users.
-     */
-    session = get_sessionid();
-    if(session && !find_mapped_name(&pb, uid, session))
-        status = NSS_STATUS_SUCCESS;
-    if(status != NSS_STATUS_SUCCESS) {
-        /* lookup by some other user or unrelated process, try dir lookup */
-        if (!find_mappingfile(&pb, uid))
-            status = NSS_STATUS_SUCCESS;
-    }
-    return status;
+	/* session needs to be set to lookup this user.  May also be set
+	 * for other users.
+	 */
+	session = get_sessionid();
+	if (session && !find_mapped_name(&pb, uid, session))
+		status = NSS_STATUS_SUCCESS;
+	if (status != NSS_STATUS_SUCCESS) {
+		/* lookup by some other user or unrelated process, try dir lookup */
+		if (!find_mappingfile(&pb, uid))
+			status = NSS_STATUS_SUCCESS;
+	}
+	return status;
 }
