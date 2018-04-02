@@ -1,5 +1,5 @@
 .TH nss_mapuser 8
-.\" Copyright 2017 Cumulus Networks, Inc.  All rights reserved.
+.\" Copyright 2017, 2018 Cumulus Networks, Inc.  All rights reserved.
 .SH NAME
 libnss_mapname.so.2 \- NSS mapuser plugin
 .br
@@ -14,16 +14,50 @@ provide enough information to define a linux account (uid, gid, home directory).
 The traditional method was to add all RADIUS users to the local
 .I /etc/passwd
 file, or to enable them via other means such as LDAP.
+.P
 These plugins allow RADIUS users to login with no configuration other than the
 initial setup of the RADIUS client, and these plugins.
-.PP
+.P
 The plugins work by mapping user accounts to a named account in a configuration
 file, and using the named account as a template for the requested account.
-.PP
-The named account (default is
-.I radius_user)
+.P
+The named accounts
 must be present in
-.IR /etc/passwd .
+.IR /etc/passwd ,
+and the groups set up correctly in
+.IR /etc/group
+for these plugins to work correctly.
+.P
+The default accounts are
+.I radius_priv_user
+for privileged logins with
+the RADIUS VSA
+.BR shell:priv-lvl=15 )
+attribute, and
+.I radius_user
+for logins without that attribute, or with the privilege level 0-14.
+The accounts are created when the debian package is installed.
+.P
+The mapname plugin also supplies NSS functions for the group file, in
+order to map RADIUS logins into appropriate groups.   For this to work,
+the two RADIUS accounts above are added to the
+.BR sudo ,
+.BR netshow ,
+and
+.B netedit
+groups during the installation of the debian packge.  The privileged account
+is made a member of the
+.B sudo
+and
+.B netedit
+groups, while the unprivileged account is made a member of the
+.B netshow
+group.   This can be verified after logging in by using the
+.IR id (1),
+or
+.IR groups (1)
+command to list the groups of which you are a member.
+.P
 The
 .B pw_name
 field (user account name)
@@ -67,19 +101,31 @@ file with the same UID.
 There are two separate plugins,
 .B libnss_mapname
 for user account names
-.RI ( getpwnam() (3)),
+.RI ( getpwnam() (3)
+and
+.RI ( getpwnam_r() (3)),
+as well as
+.RI ( getgrnam() (3),
+.RI ( getpgram_r() (3)),
+and
+.RI ( getpgrent() (3)),
 and
 .B libnss_mapuid
 for uid
-.RI ( getpwuid() (3)),
-Two separate plugins are required.
-.PP
+.RI ( getpwuid() (3)
+and
+.RI ( getpwuid_r() (3)).
+.P
+Two separate plugins are required due to ordering requirements in
+.IR /etc/nsswitch.conf .
+.P
 The name lookup
 .B mapuser
 must be the last method used (last plugin on the
 .B passwd
 database), because it will always produce a successful lookup on
-any user account name, unless there are configuration or other errors.
+any user account name, unless the name has has been excluded, or if
+there are configuration or other errors.
 .PP
 The uid lookup
 .B mapuid
@@ -87,24 +133,29 @@ must be the first method used (first plugin on the
 .B passwd
 database), because the uid will always match a local account from
 .IR /etc/passwd ,
-any user account name, unless there are configuration or other errors.
+any user account name, unless limited by the minimum uid configuration, or
+if there are configuration or other errors.
 .PP
-The flat file database is created using the
-.B pam_script
-plugin.  In addition to creating and deleting files at session start and
-end, the open script will also create the home directory using
-.IR mkhomedir_helper .
+The flat file database used by these plugins is created and removed by the
+.B pam_radius_auth
+plugin from the libpam-radius-auth package.
+In addition to creating and deleting files at session start and end, the
+.B pam_radius_auth
+plugin will also create the home directory using the
+.I mkhomedir_helper
+program.
 .SH "SEE ALSO"
 .BR adduser (8),
 .BR mkhomedir_helper (8),
 .BR pam_radius_auth (8),
-.BR pam_script (8),
 .BR nss_mapuser (5),
 .BR nsswitch.conf (5),
 .BR getpwuid (3),
 .BR getpwnam (3),
 .BR getent (1).
 .SH FILES
+.I /etc/nsswitch.conf
+- configuration file for NSS plugins.  It is modified at package installation
 .I /etc/nss_mapuser.conf
 - mapuser NSS plugin configuration parameters.
 .br

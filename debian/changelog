@@ -2,6 +2,10 @@ libnss-mapuser (1.0.0-cl3u3) RELEASED; urgency=low
 
   * Closes CM-19866 - Fixed exclude_users not skipped, and added
     more system accounts to exclude_users: www-data,man, tacacs[0-9]*.
+  * New Enabled - When Vendor Specific Option containing shell:priv-lvl
+    is present, and the value is 15, map to user radius_priv_user, and
+    give that user account more privileges, similar to tacplus client
+    privilege 15.
 
  -- dev-support <dev-support@cumulusnetworks.com>  Mon, 26 Feb 2018 09:51:44 -0800
 

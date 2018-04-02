@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Cumulus Networks, Inc.
+ * Copyright (C) 2017, 2018 Cumulus Networks, Inc.
  * All rights reserved.
  * Author: Dave Olson <olson@cumulusnetworks.com>
  *
@@ -19,12 +19,18 @@
 
 /*
  * This plugin implements getpwnam_r for NSS to map any user
- * name to a fixed account (from the configuration file).  The
- * fixed account is used to get the base of the home directory,
+ * name to one of two account (from the configuration file).
+ * The base mapping is done if no shell:prv-lvl attribute is
+ * received, or if the value is less than 15.  If the attribute
+ * is present with the value 15, then we map to the privileged
+ * mapping account, which typically has the ability to run
+ * configuration commands.
+ * The fixed account is used to get the base of the home directory,
  * and for the uid and gid.  All other fields are replaced, and
  * the password is always returned as 'x' (disabled).  The assumption
  * is that any authentication and authorization will be done via PAM
- * using some mechanism other than the local password file.
+ * using some mechanism other than the local password file, such as
+ * RADIUS
  *
  * Because it will match any account, this should always be the
  * last module in /etc/nsswitch.conf for the passwd entry
@@ -37,15 +43,10 @@
 
 #include "map_common.h"
 #include <stdbool.h>
+#include <fcntl.h>
+#include <grp.h>
 
 static const char *nssname = "nss_mapuser";	/* for syslogs */
-
-/*
- * If you aren't using glibc or a variant that supports this,
- * and you have a system that supports the BSD getprogname(),
- * you can replace this use with getprogname()
- */
-extern const char *__progname;
 
 /*
  * This is an NSS entry point.
@@ -63,21 +64,11 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
 	enum nss_status status = NSS_STATUS_NOTFOUND;
 	struct pwbuf pbuf;
 	bool islocal = 0;
+	unsigned session;
 
-	/*
-	 * the useradd family will not add/mod/del users correctly with
-	 * the mapuid functionality, so return immediately if we are
-	 * running as part of those processes.
-	 */
-	if (__progname && (!strcmp(__progname, "useradd") ||
-			   !strcmp(__progname, "usermod") ||
-			   !strcmp(__progname, "userdel")))
-		return status;
-
-	if (nss_mapuser_config(errnop, nssname) == 1) {
-		syslog(LOG_NOTICE, "%s: bad configuration", nssname);
-		return status;
-	}
+	if (map_init_common(errnop, nssname))
+		return errnop
+		    && *errnop == ENOENT ? NSS_STATUS_UNAVAIL : status;
 
 	/*
 	 * Ignore any name starting with tacacs[0-9] in case a
@@ -109,7 +100,7 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
 		}
 	}
 	if (islocal) {
-		if (debug > 1)
+		if (map_debug > 1)
 			syslog(LOG_DEBUG, "%s: skipped excluded user: %s",
 			       nssname, name);
 		return 2;
@@ -122,8 +113,288 @@ enum nss_status _nss_mapname_getpwnam_r(const char *name, struct passwd *pw,
 	pbuf.buflen = buflen;
 	pbuf.errnop = errnop;
 
-	if (!get_pw_mapuser(name, &pbuf))
+	session = get_sessionid();
+	if (session && !find_mapped_name(&pbuf, (uid_t) - 1, session))
 		status = NSS_STATUS_SUCCESS;
+	if (status != NSS_STATUS_SUCCESS) {
+		/* lookup by some unrelated process, try dir lookup */
+		if (!find_mappingfile(&pbuf, (uid_t) - 1))
+			status = NSS_STATUS_SUCCESS;
+		else if (!make_mapuser(&pbuf, name))
+			status = NSS_STATUS_SUCCESS;
+	}
+
+	return status;
+}
+
+/*
+ * The group routines are here so we can substitute mappings for radius_user
+ * and radius_priv_user when reading /etc/group, so that we can make
+ * users members of the appropriate groups for various privileged
+ * (and unprivileged) tasks.
+ * Ideally, we'd be able to use the getgr* routines specifying compat,
+ * but the NSS plugin infrastructure doesn't support that, so we have to
+ * read /etc/group directly, and then do our substitutions.
+ *
+ * This won't work if the RADIUS users are in LDAP group and/or password
+ * files, but that's the way it goes.
+ *
+ * For the intended purpose, it works well enough.
+ *
+ * We need getgrent() for this one, because initgroups needs it, unlike
+ * the password file.
+ */
+
+static FILE *grent;
+
+__attribute__ ((visibility("default")))
+enum nss_status _nss_mapname_setgrent(void)
+{
+	enum nss_status status = NSS_STATUS_NOTFOUND;
+	static const char *grpname = "/etc/group";
+	int error, *errnop = &error;
+
+	if (map_init_common(errnop, nssname))
+		return errnop
+		    && *errnop == ENOENT ? NSS_STATUS_UNAVAIL : status;
+
+	if (grent) {
+		rewind(grent);
+		status = NSS_STATUS_SUCCESS;
+		goto done;
+	}
+
+	grent = fopen(grpname, "r");
+	if (!grent) {
+		syslog(LOG_WARNING, "%s: failed to open %s: %m",
+		       nssname, grpname);
+		status = NSS_STATUS_UNAVAIL;
+	} else {
+		status = NSS_STATUS_SUCCESS;
+		/*  don't leave fd open across execs */
+		(void)fcntl(fileno(grent), F_SETFD, FD_CLOEXEC);
+	}
+ done:
+	return status;
+}
+
+__attribute__ ((visibility("default")))
+enum nss_status _nss_mapname_endgrent(void)
+{
+	if (grent) {
+		FILE *f = grent;
+		grent = NULL;
+		(void)fclose(f);
+	}
+	return NSS_STATUS_SUCCESS;
+}
+
+/*
+ * do the fixups and copies, using the passed in buffer.  result must
+ * have been checked to be sure it's non-NULL before calling.
+ */
+static int fixup_grent(struct group *entry, struct group *result, char *buf,
+		       size_t lenbuf, int *errp)
+{
+	char **grusr, **new_grmem = NULL;
+	struct group *newg;
+	long long l, len;	/* size_t unsigned on some systems */
+	int err, members, memlen;
+	int ret = NSS_STATUS_NOTFOUND;
+	unsigned pmatch = 0;
+	char *nm = entry->gr_name ? entry->gr_name : "(nil)";
+
+	if (!result)		/* should always be non-NULL, just cautious */
+		return ret;
+
+	len = lenbuf;
+	if (!errp)		/*  to reduce checks below */
+		errp = &err;
+	*errp = 0;
+
+	newg = (struct group *)buf;
+	len -= sizeof *newg;
+	buf += sizeof *newg;
+	if (len < 0) {
+		*errp = ENOMEM;
+		return ret;
+	}
+	newg->gr_gid = entry->gr_gid;
+	l = snprintf(buf, len, "%s", entry->gr_name);
+	newg->gr_name = buf;
+	len -= l + 1;
+	buf += l + 1;
+	if (len > 0) {
+		l = snprintf(buf, len, "%s", entry->gr_passwd);
+		newg->gr_passwd = buf;
+		len -= l + 1;
+		buf += l + 1;
+	}
+	if (len < 0) {
+		*errp = ENOMEM;
+		return NSS_STATUS_TRYAGAIN;
+	}
+
+	for (memlen = members = 0, grusr = entry->gr_mem; grusr && *grusr;
+	     grusr++) {
+		if (mapped_priv_user && !strcmp(mapped_priv_user, *grusr))
+			pmatch |= PRIV_MATCH;
+		else if (mappeduser && !strcmp(mappeduser, *grusr))
+			pmatch |= UNPRIV_MATCH;
+		members++;
+		memlen += strlen(*grusr) + 1;
+	}
+	if (pmatch) {		/* one or both mapped users are in gr_mem */
+		size_t usedbuf = len;
+		new_grmem = fixup_gr_mem(nm, (const char **)entry->gr_mem,
+					 buf, &usedbuf, errp, pmatch);
+		buf += usedbuf;
+		len -= usedbuf;
+		if (errp) {
+			if (*errp == ERANGE)
+				ret = NSS_STATUS_TRYAGAIN;
+			else if (*errp == ENOENT)
+				ret = NSS_STATUS_UNAVAIL;
+
+		} else if (len < 0) {
+			*errp = ERANGE;
+			ret = NSS_STATUS_TRYAGAIN;
+		}
+	}
+	if (*errp)
+		goto done;
+	*result = *newg;
+	if (new_grmem)
+		result->gr_mem = new_grmem;
+	else {
+		char **sav, **entgr, *usrbuf;
+		len -= (members + 1) * sizeof *new_grmem;
+		len -= memlen;
+		if (len < 0) {
+			*errp = ERANGE;
+			ret = NSS_STATUS_TRYAGAIN;
+			goto done;
+		}
+		sav = result->gr_mem = (char **)buf;
+		buf += (members + 1) * sizeof *new_grmem;
+		usrbuf = buf;
+
+		for (entgr = entry->gr_mem; entgr && *entgr; entgr++, sav++) {
+			*sav = usrbuf;
+			usrbuf += strlen(*entgr) + 1;
+			strcpy(*sav, *entgr);
+		}
+
+		*sav = NULL;
+	}
+	ret = NSS_STATUS_SUCCESS;
+ done:
+	return ret;
+}
+
+/*
+ * No locking needed because our only global is the dirent * for
+ * the runuser directory, and our use of that should be thread safe
+ */
+__attribute__ ((visibility("default")))
+enum nss_status _nss_mapname_getgrent_r(struct group *gr_result,
+					char *buffer, size_t buflen,
+					int *errnop)
+{
+	enum nss_status status = NSS_STATUS_NOTFOUND;
+	struct group *ent;
+	int ret = 1;
+
+	if (!gr_result) {
+		if (errnop)
+			*errnop = EFAULT;
+		return status;
+	}
+
+	if (map_init_common(errnop, nssname))
+		return errnop
+		    && *errnop == ENOENT ? NSS_STATUS_UNAVAIL : status;
+
+	if (!grent) {
+		status = _nss_mapname_setgrent();
+		if (status != NSS_STATUS_SUCCESS)
+			return status;
+	}
+
+	ent = fgetgrent(grent);
+	if (!ent) {
+		int e = errno;
+		if (ferror(grent)) {
+			syslog(LOG_WARNING,
+			       "%s: error reading group information: %m",
+			       nssname);
+			errno = e;
+		} else
+			errno = 0;
+		return status;
+	}
+	ret = fixup_grent(ent, gr_result, buffer, buflen, errnop);
+	return ret;
+}
+
+__attribute__ ((visibility("default")))
+enum nss_status _nss_mapname_getgrnam_r(const char *name, struct group *gr,
+					char *buffer, size_t buflen,
+					int *errnop)
+{
+	enum nss_status status = NSS_STATUS_NOTFOUND;
+	struct group *ent;
+
+	if (!gr) {
+		if (errnop)
+			*errnop = EFAULT;
+		return status;
+	}
+
+	if (map_init_common(errnop, nssname))
+		return errnop
+		    && *errnop == ENOENT ? NSS_STATUS_UNAVAIL : status;
+
+	if (_nss_mapname_setgrent() != NSS_STATUS_SUCCESS)
+		return status;
+
+	for (ent = fgetgrent(grent); ent; ent = fgetgrent(grent)) {
+		if (!strcmp(ent->gr_name, name)) {
+			status = fixup_grent(ent, gr, buffer, buflen, errnop);
+			break;
+		}
+	}
+
+	return status;
+}
+
+__attribute__ ((visibility("default")))
+enum nss_status _nss_mapname_getgrgid_r(gid_t gid, struct group *gr,
+					char *buffer, size_t buflen,
+					int *errnop)
+{
+	enum nss_status status = NSS_STATUS_NOTFOUND;
+	struct group *ent;
+
+	if (!gr) {
+		if (errnop)
+			*errnop = EFAULT;
+		return status;
+	}
+
+	if (map_init_common(errnop, nssname))
+		return errnop
+		    && *errnop == ENOENT ? NSS_STATUS_UNAVAIL : status;
+
+	if (_nss_mapname_setgrent() != NSS_STATUS_SUCCESS)
+		return status;
+
+	for (ent = fgetgrent(grent); ent; ent = fgetgrent(grent)) {
+		if (ent->gr_gid == gid) {
+			status = fixup_grent(ent, gr, buffer, buflen, errnop);
+			break;
+		}
+	}
 
 	return status;
 }

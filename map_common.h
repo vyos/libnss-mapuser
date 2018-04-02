@@ -49,10 +49,19 @@ struct pwbuf {
 extern char *exclude_users;
 extern char *mappeduser;
 extern char *mapped_priv_user;
-extern uid_t min_uid;
-extern int debug;
+extern uid_t map_min_uid;
+extern int map_debug;
 
 extern int nss_mapuser_config(int *errnop, const char *lname);
-extern int pwcopy(char *buf, size_t len, struct passwd *srcpw,
-		  struct passwd *destpw, const char *usename);
-extern int get_pw_mapuser(const char *name, struct pwbuf *pb);
+extern uint32_t get_sessionid(void);
+extern int skip_program(void);
+extern int find_mappingfile(struct pwbuf *pb, uid_t uid);
+extern int find_mapped_name(struct pwbuf *pb, uid_t uid, uint32_t session);
+extern int make_mapuser(struct pwbuf *pb, const char *name);
+extern int map_init_common(int *errnop, const char *plugname);
+extern char **fixup_gr_mem(const char *name, const char **gr_in, char *buf,
+			   size_t * lp, int *err, unsigned privbits);
+extern void cleanup_gr_mem(void);
+
+#define PRIV_MATCH 2
+#define UNPRIV_MATCH 1
