@@ -1,21 +1,22 @@
 .TH nss_mapuser 5
-.\" Copyright 2017 Cumulus Networks, Inc.  All rights reserved.
+.\" Copyright 2017, 2018 Cumulus Networks, Inc.  All rights reserved.
 .SH NAME
 nss_mapuser.conf \- NSS mapuser configuration file
 .SH DESCRIPTION
-This is the configuration file for the NSS mapuser plugins.
+This is the configuration file for the NSS mapuser and mapuid plugins.
 See the
 .BR nss_mapuser (8)
-manpage for more general information on the plugin.
-This configuration file controls debug settings, the local account used
-for mapping users, and which usernames (accounts) and uids are skipped.
-.PP
+manpage for more general information on the plugins.
+.P
+This configuration file controls debug settings, the local accounts used for mapping
+users, and the list of usernames (accounts) and uids that are skipped (not looked up by
+this plugin).
 .TP
 .I debug=NUMBER
 Output lookup debugging information via syslog(3).
 .TP
 .I exclude_users=user1,user2...
-Usernames (accounts) comma separate list.  This is used by mapname NSS plugin getpwuid()
+Usernames (accounts) comma separate list.  This is used by the NSS mapuser plugin getpwuid()
 entry point.  The account to be looked up is checked against this list.   If a match is
 found, an immediate NOTFOUND status is returned.  This reduces overhead for the standard
 local user accounts.  The
@@ -23,19 +24,48 @@ local user accounts.  The
 and
 .I mapped_priv_user
 fields from the
-configuration file are always skipped, as are any names starting with 
+configuration file are always skipped, as are any names starting with
 .BR tacacs[0-9] .
 .TP
-.I mapped_user=NAME
-This is the local account which mapping uses as a template.   It must be a local
-account (found in
+.I min_uid=NUMBER
+UID's passed to the NSS mapuid plugin getpwuid() entry point that are below this value
+cause an immediate NOTFOUND status to be returned.  This reduces
+overhead for the standard local user accounts.
+.BR NOTE :
+The value must be less than the uid of the mapped account names below.
+.TP
+.I mapped_priv_user=NAME
+This is the local account used as a template for privileged logins
+(the RADIUS VSA
+.BR shell:priv-lvl=15 )
+was returned by the server.
+This must be a local account (found in
 .IR /etc/passwd ).
 When a uid or name match is found, this account information is read from
 .I /etc/passwd
-and used as a template for the matching account.  The
+and used as a template for the matching account.  The default at installation is
+.BR radius_priv_user .
+.TP
+.I mapped_user=NAME
+This is the local account used as a template for unprivileged logins
+(either no privilege attribute was returned by the server, or the privilege level is
+is in the range 0-14.   This must be a local account (found in
+.IR /etc/passwd ).
+When a uid or name match is found, this account information is read from
+.I /etc/passwd
+and used as a template for the matching account.  The default at installation is
+.BR radius_user .
+.P
+For the
+.I map_user
+and
+.I map_priv_user
+accounts, the user information that is returned via the
+.BR getpwnam (3)
+group of account lookup routines has the
 .B pw_name
 field (user account name)
-is replaced with the original (login) name, and the original name is
+replaced with the original (login) name, and the original name is
 inserted at the beginning of the
 .B pw_gecos
 field.  The
@@ -43,8 +73,12 @@ field.  The
 (home directory)
 field replaces the last component of the directory path with the original login
 name.
-.IP
-When changing this field to a different name than the default, be sure the account exists in
+.P
+When changing the
+.I map_user
+or
+.I map_priv_user
+fields to a different account than the default, be sure the account exists in
 .IR /etc/passwd ,
 and that the account was created as disabled or locked (does not have a legal password, so
 the
@@ -54,11 +88,22 @@ account can not be used for logins.  When using
 to create these accounts, use the
 .B --disabled-login
 argument to disable login for the account.
-.TP
-.I min_uid=NUMBER
-UID's passed to the mapuid NSS plugin getpwuid() entry point that are below this value
-cause an immediate NOTFOUND status to be returned.  This reduces
-overhead for the standard local user accounts.
+.P
+At installation, the
+.I map_user
+user account
+.B radius_user
+is added to the
+.I netshow
+group so that the user can run NCLU
+.B net show
+commands.  Similarly, the
+.I map_priv_user
+user account
+.B radius_priv_user
+is added to the
+.I netedit
+group so that the user can run NCLU configuration commands.
 .SH "SEE ALSO"
 .BR adduser (8),
 .BR pam_radius_auth (8),

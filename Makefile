@@ -26,8 +26,9 @@ endif
 CPPFLAGS = -D_FORTIFY_SOURCE=2
 CFLAGS = $(CPPFLAGS) ${OPTFLAGS} -fPIC -fstack-protector-strong \
 		 -Wformat -Werror=format-security -Wall $(FVISIBILITY)
+LDLIBS = -laudit
 LDFLAGS = -shared  -fPIC -DPIC \
-		  -Wl,-z -Wl,relro -Wl,-z -Wl,now -Wl,-soname -Wl,$@
+		  -Wl,-z -Wl,relro -Wl,-z -Wl,now -Wl,-soname -Wl,$@ $(LDLIBS)
 
 all: $(NSSNAMELIB) $(NSSUIDLIB)
 

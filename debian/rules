@@ -16,9 +16,3 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 # No configuration needed
 override_dh_auto_configure:
 
-override_dh_install:
-	dh_installdirs /usr/share/pam-configs /usr/share/mapuser
-	install -p -m 755 pam_script_ses* debian/libnss-mapuser/usr/share/mapuser
-	install -p -m 444 debian/mapuser \
-			debian/libnss-mapuser/usr/share/pam-configs/
-	dh_install

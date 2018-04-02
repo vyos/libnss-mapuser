@@ -19,11 +19,19 @@ case "$1" in
 				-e '/^passwd:/s/\s\s*/&mapuid /' \
 				-e '/^passwd:.*#/s/#.*/ mapname &/' \
 				-e '/^passwd:[^#]*$/s/$/ mapname &/' \
+				-e '/^group:.*#/s/#.*/ mapname &/' \
+				-e '/^group:[^#]*$/s/: */& mapname /' \
 				/etc/nsswitch.conf
 		fi
 		addgroup --quiet $rgroup 2>&1 | grep -v 'already exists'
 		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
 		    --gecos "radius user" radius_user 2>&1 | grep -v 'already exists'
+		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
+		    --gecos "radius privileged user" radius_priv_user 2>&1 | grep -v 'already exists'
+		# regular radius logins can run net show commands
+		adduser --quiet radius_user netshow
+		# privileged radius logins can run net config commands, as well as show
+		adduser --quiet radius_priv_user netedit
 		exit 0
 		)
     ;;
