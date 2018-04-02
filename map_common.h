@@ -23,7 +23,6 @@
  * stripped during the linking phase (made internal only).
  */
 
-
 #include <string.h>
 #include <syslog.h>
 #include <stdlib.h>
@@ -34,17 +33,16 @@
 #include <ctype.h>
 #include <nss.h>
 
-
 /*
  * pwbuf is used to reduce number of arguments passed around; the strings in
  * the passwd struct need to point into this buffer.
  */
 struct pwbuf {
-    char *name;
-    char *buf;
-    struct passwd *pw;
-    int *errnop;
-    size_t buflen;
+	char *name;
+	char *buf;
+	struct passwd *pw;
+	int *errnop;
+	size_t buflen;
 };
 
 /* configuration variables. */
@@ -55,7 +53,6 @@ extern uid_t min_uid;
 extern int debug;
 
 extern int nss_mapuser_config(int *errnop, const char *lname);
-extern int pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
-       const char *usename);
+extern int pwcopy(char *buf, size_t len, struct passwd *srcpw,
+		  struct passwd *destpw, const char *usename);
 extern int get_pw_mapuser(const char *name, struct pwbuf *pb);
-
