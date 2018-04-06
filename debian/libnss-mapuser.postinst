@@ -32,6 +32,7 @@ case "$1" in
 		adduser --quiet radius_user netshow
 		# privileged radius logins can run net config commands, as well as show
 		adduser --quiet radius_priv_user netedit
+		adduser --quiet radius_priv_user sudo
 		exit 0
 		)
     ;;
