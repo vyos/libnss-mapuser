@@ -45,6 +45,9 @@ When a uid or name match is found, this account information is read from
 .I /etc/passwd
 and used as a template for the matching account.  The default at installation is
 .BR radius_priv_user .
+It must match the privileged account name in
+.IR pam_radius_auth (5)
+for correct operation.
 .TP
 .I mapped_user=NAME
 This is the local account used as a template for unprivileged logins
