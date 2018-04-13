@@ -1,4 +1,9 @@
 libnss_mapname.so.2 libnss-mapuser #MINVER#
+ _nss_mapname_setgrent@Base 1.1.0-cl3u1
+ _nss_mapname_endgrent@Base 1.1.0-cl3u1
+ _nss_mapname_getgrent_r@Base 1.1.0-cl3u1
+ _nss_mapname_getgrgid_r@Base 1.1.0-cl3u1
+ _nss_mapname_getgrnam_r@Base 1.1.0
  _nss_mapname_getpwnam_r@Base 1.0.0
 
 libnss_mapuid.so.2 libnss-mapuser #MINVER#

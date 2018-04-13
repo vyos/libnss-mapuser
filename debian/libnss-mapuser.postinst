@@ -24,10 +24,13 @@ case "$1" in
 				/etc/nsswitch.conf
 		fi
 		addgroup --quiet $rgroup 2>&1 | grep -v 'already exists'
+		ourshell=/bin/bash # not radius_shell, has pkg ordering issues.
 		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
-		    --gecos "radius user" radius_user 2>&1 | grep -v 'already exists'
+			--gecos "radius user" --shell $ourshell radius_user 2>&1 |
+			grep -v 'already exists'
 		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
-		    --gecos "radius privileged user" radius_priv_user 2>&1 | grep -v 'already exists'
+			--gecos "radius privileged user" --shell $ourshell radius_priv_user 2>&1 |
+			grep -v 'already exists'
 		# regular radius logins can run net show commands
 		adduser --quiet radius_user netshow
 		# privileged radius logins can run net config commands, as well as show

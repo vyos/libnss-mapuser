@@ -26,6 +26,7 @@
 #include "map_common.h"
 #include <sys/stat.h>
 #include <stddef.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <ctype.h>
@@ -293,7 +294,7 @@ get_pw_mapuser(const char *name, struct pwbuf *pb, uid_t mapuid, int privileged)
 	for (ret = 1; ret && (ent = fgetpwent(pwfile));) {
 		if (!ent->pw_name)
 			continue;	/* shouldn't happen */
-		if (!strcmp(ent->pw_name, name) ||
+		if (!strcmp(ent->pw_name, name) || /*  added locally */
 		    !strcmp(ent->pw_name, privileged ? mapped_priv_user :
 			    mappeduser) || ent->pw_uid == mapuid) {
 			ret =
@@ -320,7 +321,6 @@ static int chk_session_file(char *session, uid_t uid, struct pwbuf *pb)
 	FILE *mapf;
 	uid_t auid = 0;
 	int ret = 1, privileged = 0;;
-	int gotinfo = 0;	/*  user, session, auid */
 
 	snprintf(sessfile, sizeof sessfile, "%s%s", dbdir, session);
 
@@ -333,46 +333,65 @@ static int chk_session_file(char *session, uid_t uid, struct pwbuf *pb)
 		return ret;
 	}
 	user[0] = '\0';
-	while (gotinfo != 4 && fgets(rbuf, sizeof rbuf, mapf)) {
-		strtok(rbuf, " \t\n\r\f");	/* terminate buffer at first whitespace */
+	while (fgets(rbuf, sizeof rbuf, mapf)) {
+		/* terminate buffer at first whitespace */
+		strtok(rbuf, " \t\n\r\f");
 		if (!strncmp("user=", rbuf, 5)) {
 			if (pb->name && strcmp(rbuf + 5, pb->name))
 				break;
 			snprintf(user, sizeof user, "%s", rbuf + 5);
-			gotinfo++;
+		} else if (!strncmp("pid=", rbuf, 4)) {
+			char *ok;
+			unsigned pid = (unsigned) strtoul(rbuf + 4, &ok, 10);
+			if (ok != (rbuf + 4) && pid > 0 && kill(pid, 0) &&
+			    errno == ESRCH) {
+				/*  ESRCH instead of any error because perms as
+				 *  non-root.  Try to unlink, since we often
+				 *  run as root; report as DEBUG if we unlink,
+				 *  report as INFO if not */
+				if (unlink(sessfile) == 0)
+					syslog(LOG_DEBUG, "session file %s"
+					       " PID=%u no longer active,"
+					       " removed", sessfile, pid);
+				else
+					syslog(LOG_INFO, "session file %s"
+					       " PID=%u no longer active, skip",
+					       sessfile, pid);
+				auid = 0; /*  force fail */
+				break;
+			}
 		} else if (!strncmp("auid=", rbuf, 5)) {
 			char *ok;
 			uid_t fuid = (uid_t) strtoul(rbuf + 5, &ok, 10);
 			if (ok != (rbuf + 5)) {
-				gotinfo++;
 				if (uid != -1 && fuid != uid) {
-					auid = fuid;
-					break;	/*  getpwuid, but uid/auid mismatch, nogo */
+					/*  getpwuid call but mismatch, nogo */
+					break;
 				} else
 					auid = fuid;
 			}
 		} else if (!strcasecmp("privileged=yes", rbuf)) {
 			privileged = 1;
-			gotinfo++;
-		} else if (!strcasecmp("privileged=no", rbuf))
-			gotinfo++;
-		else if (!strncmp("session=", rbuf, 8)) {
+		} else if (!strcasecmp("privileged=no", rbuf)) {
+			privileged = 0;
+		} else if (!strncmp("session=", rbuf, 8)) {
 			/*  structural problem, so log warning */
 			if (strcmp(session, rbuf + 8)) {
 				syslog(LOG_WARNING,
-				       "%s: session field \"%s\" mismatch in %s",
+				       "%s: session \"%s\" mismatch in %s",
 				       libname, rbuf, sessfile);
-			} else
-				gotinfo++;
+				auid = 0; /*  force a skip */
+			}
 		}
 	}
 	fclose(mapf);
 
-	if (auid && user[0]) {	/*  otherwise not a match */
+	if (auid && (uid == (uid_t)-1 || auid == uid) && user[0]) {
 		if (!pb->name)
 			pb->name = user;	/*  uid lookups */
 		ret = get_pw_mapuser(user, pb, auid, privileged);
 	}
+	/*  otherwise not a match */
 
 	return ret;
 }
@@ -429,7 +448,7 @@ int find_mappingfile(struct pwbuf *pb, uid_t uid)
 int make_mapuser(struct pwbuf *pb, const char *name)
 {
 	int ret;
-	ret = get_pw_mapuser(mappeduser, pb, (uid_t) - 1, 0);
+	ret = get_pw_mapuser(mappeduser, pb, (uid_t)-1, 0);
 	return ret;
 }
 

@@ -8,7 +8,7 @@ libnss-mapuser (1.1.0-cl3u1) RELEASED; urgency=low
     have radius_user and/or radius_priv_user, to give that that user account
     more privileges, similar to tacplus client privilege 15.
 
- -- dev-support <dev-support@cumulusnetworks.com>  Fri, 06 Apr 2018 15:46:56 -0700
+ -- dev-support <dev-support@cumulusnetworks.com>  Fri, 13 Apr 2018 16:19:08 -0700
 
 libnss-mapuser (1.0.0-cl3u2) RELEASED; urgency=low
 
