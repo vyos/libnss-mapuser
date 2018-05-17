@@ -5,50 +5,6 @@
 
 set -e
 
-case "$1" in
-    configure)
-		# Add mapname and user to /etc/nsswitch.conf, since it's necessary
-		# for this package.  uid must be first, and mapname must be last
-		# so uids for mapped users return the mapped name, and on the name,
-		# we only want to map if no other matches were found
-		# handle case where a comment follows the plugin list
-		( set +e;
-		rgroup=radius_users
-		if [ -e "/etc/nsswitch.conf" ]; then
-			sed -i -e '/\smapname/b' \
-				-e '/^passwd:/s/\s\s*/&mapuid /' \
-				-e '/^passwd:.*#/s/#.*/ mapname &/' \
-				-e '/^passwd:[^#]*$/s/$/ mapname &/' \
-				-e '/^group:.*#/s/#.*/ mapname &/' \
-				-e '/^group:[^#]*$/s/: */& mapname /' \
-				/etc/nsswitch.conf
-		fi
-		addgroup --quiet $rgroup 2>&1 | grep -v 'already exists'
-		ourshell=/bin/bash # not radius_shell, has pkg ordering issues.
-		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
-			--gecos "radius user" --shell $ourshell radius_user 2>&1 |
-			grep -v 'already exists'
-		adduser --quiet --firstuid 1000 --disabled-login --ingroup $rgroup \
-			--gecos "radius privileged user" --shell $ourshell radius_priv_user 2>&1 |
-			grep -v 'already exists'
-		# regular radius logins can run net show commands
-		adduser --quiet radius_user netshow
-		# privileged radius logins can run net config commands, as well as show
-		adduser --quiet radius_priv_user netedit
-		adduser --quiet radius_priv_user sudo
-		exit 0
-		)
-    ;;
-
-    abort-upgrade|abort-remove|abort-deconfigure)
-    ;;
-
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
-esac
-
 # needed for install, upgrade, remove, and purge, including aborts
 pam-auth-update --package
 
