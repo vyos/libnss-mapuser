@@ -141,15 +141,15 @@ int nss_mapuser_config(int *errnop, const char *lname)
 		} else if (!strncmp(lbuf, "mapped_priv_user=", 17)) {
 			/*  the user we are mapping to */
 			mapped_priv_user = strdup(lbuf + 17);
-		} else if (!strncmp(lbuf, "map_min_uid=", 8)) {
+		} else if (!strncmp(lbuf, "map_min_uid=", 12)) {
 			/*
 			 * Don't lookup uids that are local, typically set to either
 			 * 0 or smallest always local user's uid
 			 */
 			unsigned long uid;
 			char *valid;
-			uid = strtoul(lbuf + 8, &valid, 0);
-			if (valid > (lbuf + 8))
+			uid = strtoul(lbuf + 12, &valid, 0);
+			if (valid > (lbuf + 12))
 				map_min_uid = (uid_t) uid;
 		} else if (map_debug)	/* ignore unrecognized lines, unless map_debug on */
 			syslog(LOG_WARNING, "%s: unrecognized parameter: %s",
