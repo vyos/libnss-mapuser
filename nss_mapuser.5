@@ -27,7 +27,7 @@ fields from the
 configuration file are always skipped, as are any names starting with
 .BR tacacs[0-9] .
 .TP
-.I min_uid=NUMBER
+.I map_min_uid=NUMBER
 UID's passed to the NSS mapuid plugin getpwuid() entry point that are below this value
 cause an immediate NOTFOUND status to be returned.  This reduces
 overhead for the standard local user accounts.
