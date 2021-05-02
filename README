@@ -29,7 +29,7 @@ by the passed in username.   The uid, gid, and shell fields are copied directly
 from the map_user account passwd dataa.
 
 For example, if the passed in username is 'olsonr', the result of running
-   getent -s mapname passwd olsonr
+   getent -s mapuser passwd olsonr
 will be something like this:
    olsonr:x:1017:1017:olsonr mapped user:/home/olsonr:/bin/bash
 if the map_user field is set to radius_user, and the radius_user entry in

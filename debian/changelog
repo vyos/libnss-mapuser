@@ -1,3 +1,16 @@
+libnss-mapuser (1.1.0-cl3u3) RELEASED; urgency=medium
+
+  * minor fixes 
+
+ -- dev-support <dev-support@cumulusnetworks.com>  Mon, 29 Oct 2018 13:34:42 -0700
+
+libnss-mapuser (1.1.0-cl3u2) RELEASED; urgency=low
+
+  * Changed postinst to not create unneeded home directories for
+    radius_user and radius_priv_user when running adduser at install
+
+ -- dev-support <dev-support@cumulusnetworks.com>  Wed, 18 Apr 2018 18:18:16 -0700
+
 libnss-mapuser (1.1.0-cl3u1) RELEASED; urgency=low
 
   * Closes CM-19866 - Fixed exclude_users not skipped, and added

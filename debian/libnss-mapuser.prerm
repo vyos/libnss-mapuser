@@ -4,6 +4,13 @@ set -e
 
 if [ "$1" = remove ]; then
 	pam-auth-update --package --remove mapuser
+    # Undo the addition of the plugins
+    if [ -e "/etc/nsswitch.conf" ]; then
+        sed -i -e '/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//' \
+            -e '/^passwd:.*[ \t]mapname/s/[ \t]mapname//' \
+            -e '/^group:.*[ \t]mapname/s/[ \t]mapname//' \
+            /etc/nsswitch.conf || true # don't prevent remove on error
+    fi
 fi
 
 #DEBHELPER#
