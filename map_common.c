@@ -141,7 +141,7 @@ int nss_mapuser_config(int *errnop, const char *lname)
 		} else if (!strncmp(lbuf, "mapped_priv_user=", 17)) {
 			/*  the user we are mapping to */
 			mapped_priv_user = strdup(lbuf + 17);
-		} else if (!strncmp(lbuf, "map_min_uid=", 8)) {
+		} else if (!strncmp(lbuf, "min_uid=", 8)) {
 			/*
 			 * Don't lookup uids that are local, typically set to either
 			 * 0 or smallest always local user's uid
