@@ -1,12 +1,12 @@
-Source: libnss-mapuser
+Source: vyos-libnss-mapuser
 Priority: optional
-Maintainer: dev-support <dev-support@cumulusnetworks.com>
+Maintainer: VyOS maintainers <maintainers@vyos.io>
 Build-Depends: debhelper (>= 9), dpkg-dev (>= 1.16.1), libaudit-dev, git
 Section: libs
 Standards-Version: 3.9.6
-Homepage: http://www.cumulusnetworks.com
+Homepage: http://vyos.net
 
-Package: libnss-mapuser
+Package: vyos-libnss-mapuser
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libaudit1, adduser
 Description: NSS modules to map any requested username to a local account

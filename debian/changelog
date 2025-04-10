@@ -1,3 +1,9 @@
+vyos-libnss-mapuser (1.1.0-cl3u3.1) RELEASED; urgency=medium
+
+  * Package rename for dependency management purposes.
+
+ -- Daniil Baturin <daniil@vyos.io>  Wed, 09 Apr 2025 15:06:25 +0000
+
 libnss-mapuser (1.1.0-cl3u3) RELEASED; urgency=medium
 
   * minor fixes 
