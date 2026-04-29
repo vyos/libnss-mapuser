@@ -56,7 +56,3 @@ Mirror twin: `VyOS-Networks/libnss-mapuser`. Canonical side is **here** (`vyos/l
 - The NSS module ordering matters — `libnss_mapuid` must be **first** and `libnss_mapname` **last** in `nsswitch.conf`. The README explains why; don't reverse them.
 - `passwd` field is forced to `'x'` so PAM auth on the base account is impossible — only the mapped accounts authenticate (typically via `pam_radius`).
 - License: GPL-2-or-later. Original copyright Cumulus Networks; VyOS additions (2020+) layered on top.
-
----
-
-This file is mirrored on Confluence: [`vyos/libnss-mapuser`](https://internal.confluence.vyos.com/wiki/spaces/VYOS/pages/817889451). The Confluence page also carries the per-repo audit data (settings, workflows, secret counts, hygiene) that complements this CLAUDE.md. Edit either side; resync via the documentation pipeline.
