@@ -39,17 +39,13 @@ No automated test suite.
 
 ## Cross-repo context
 
-One of the §3.6 authentication libraries (`libnss-*`, `libpam-*`, `libtacplus-map`). Pre-dependency of `vyos-1x` for RADIUS/TACACS+ auth flows. Native-package category — built and shipped to `packages.vyos.net` via `VyOS-Networks/vyos-build-packages`, then consumed at ISO assembly time by `vyos/vyos-build`.
+One of the §3.6 authentication libraries (`libnss-*`, `libpam-*`, `libtacplus-map`). Pre-dependency of `vyos-1x` for RADIUS/TACACS+ auth flows. Native-package category — built and shipped to `packages.vyos.net` via the internal build-packages workflow, then consumed at ISO assembly time by `vyos/vyos-build`.
 
 ## Conventions
 
 - Commit / PR title format: `component: T12345: description` (Phorge task ID at https://vyos.dev mandatory). Enforced by `vyos/.github` reusable workflows where consumed.
 - Branch model: `current` (rolling), `circinus` (1.5 LTS), `sagitta` (1.4 LTS), `equuleus` (1.3 LTS).
 - Treat as upstream-vendored — keep diffs against the Cumulus baseline minimal.
-
-## Mirror relationship
-
-Mirror twin: `VyOS-Networks/libnss-mapuser`. Canonical side is **here** (`vyos/libnss-mapuser`).
 
 ## Notes for future contributors
 
