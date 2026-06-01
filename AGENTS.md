@@ -44,7 +44,7 @@ One of the §3.6 authentication libraries (`libnss-*`, `libpam-*`, `libtacplus-m
 ## Conventions
 
 - Commit / PR title format: `component: T12345: description` (Phorge task ID at https://vyos.dev mandatory). Enforced by `vyos/.github` reusable workflows where consumed.
-- Branch model: `current` (rolling), `circinus` (1.5 LTS), `sagitta` (1.4 LTS), `equuleus` (1.3 LTS).
+- Branch model: `rolling`, `circinus` (1.5 LTS), `sagitta` (1.4 LTS), `equuleus` (1.3 LTS).
 - Treat as upstream-vendored — keep diffs against the Cumulus baseline minimal.
 
 ## Notes for future contributors
