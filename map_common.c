@@ -191,6 +191,14 @@ int
 pwcopy(char *buf, size_t len, const char *usename, struct passwd *srcpw,
        struct passwd *destpw)
 {
+#define UPDATE_BUF_LEN_AND_CHECK do {	\
+	if (len < cnt)                  \
+		goto buffer_too_small;  \
+	else {                          \
+		len -= cnt;             \
+		buf += cnt;             \
+	}                               \
+} while (0);
 	int needlen, cnt, origlen = len;
 	char *shell;
 
@@ -201,10 +209,15 @@ pwcopy(char *buf, size_t len, const char *usename, struct passwd *srcpw,
 		return 1;
 	}
 
-	needlen = 2 * strlen(usename) + 2 +	/*  pw_name and pw_gecos */
-	    srcpw->pw_dir ? strlen(srcpw->pw_dir) + 1 : 1 + srcpw->pw_shell ?
-		strlen(srcpw->pw_shell) + 1 : 1 + 2 +	/*  for 'x' in passwd */
-		12;			/*  for the "Mapped user" in gecos */
+	/* 3 usernames: 1. pw_name; 2. pw_gecos; 3. pw_dir */
+	needlen = 3 * strlen(usename) + 3;
+	/*  for 'x' in passwd */
+	needlen += 2;
+	needlen += srcpw->pw_shell ? strlen(srcpw->pw_shell) + 1 : 1;
+	/*  for the " mapped user" in gecos, '\0' in first line */
+	needlen += 12;
+	needlen += srcpw->pw_dir ? strlen(srcpw->pw_dir) : 0; /* '\0' in first line */
+
 	if (needlen > len) {
 		if (map_debug)
 			syslog(LOG_DEBUG,
@@ -219,27 +232,27 @@ pwcopy(char *buf, size_t len, const char *usename, struct passwd *srcpw,
 	cnt = snprintf(buf, len, "%s", usename);
 	destpw->pw_name = buf;
 	cnt++;			/* allow for null byte also */
-	buf += cnt;
-	len -= cnt;
+	UPDATE_BUF_LEN_AND_CHECK;
+
 	cnt = snprintf(buf, len, "%s", "x");
 	destpw->pw_passwd = buf;
 	cnt++;
-	buf += cnt;
-	len -= cnt;
+	UPDATE_BUF_LEN_AND_CHECK;
+
 	cnt = snprintf(buf, len, "%s", srcpw->pw_shell ? srcpw->pw_shell : "");
 	destpw->pw_shell = buf;
 	shell = strrchr(buf, '/');
 	shell = shell ? shell + 1 : buf;
 	cnt++;
-	buf += cnt;
-	len -= cnt;
+	UPDATE_BUF_LEN_AND_CHECK;
+
 	cnt = snprintf(buf, len, "%s mapped user", usename);
 	destpw->pw_gecos = buf;
 	cnt++;
-	buf += cnt;
-	len -= cnt;
+	UPDATE_BUF_LEN_AND_CHECK;
+
 	if (usename) {
-		char *slash, dbuf[strlen(srcpw->pw_dir) + strlen(usename)];
+		char *slash, dbuf[(srcpw->pw_dir ? strlen(srcpw->pw_dir) : 0) + strlen(usename) + 1];
 		snprintf(dbuf, sizeof dbuf, "%s",
 			 srcpw->pw_dir ? srcpw->pw_dir : "");
 		slash = strrchr(dbuf, '/');
@@ -255,17 +268,16 @@ pwcopy(char *buf, size_t len, const char *usename, struct passwd *srcpw,
 			     srcpw->pw_dir ? srcpw->pw_dir : "");
 	destpw->pw_dir = buf;
 	cnt++;
-	buf += cnt;
-	len -= cnt;
-	if (len < 0) {
-		if (map_debug)
-			syslog(LOG_DEBUG,
-			       "%s provided password buffer too small (%ld<%d)",
-			       libname, (long)origlen, origlen - (int)len);
-		return 1;
-	}
+	UPDATE_BUF_LEN_AND_CHECK;
 
 	return 0;
+buffer_too_small:
+	if (map_debug)
+		syslog(LOG_DEBUG,
+				"%s provided password buffer too small (%ld<%ld)",
+				libname, (long)origlen, (long)origlen + (cnt - len));
+	return 1;
+#undef UPDATE_BUF_LEN_AND_CHECK
 }
 
 /*
